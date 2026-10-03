@@ -1,7 +1,6 @@
-```html
-<!DOCTYPE html>
 <html lang="sr">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -279,196 +278,218 @@
     </footer>
 
     <script>
-        const forma = document.getElementById("formaZadatka");
-        const lista = document.getElementById("listaZadataka");
-        const pretraga = document.getElementById("pretraga");
-        const praznaLista = document.getElementById("praznaLista");
-        const brojZadataka = document.getElementById("brojZadataka");
+    const SUPABASE_URL ="https://zfqfjyzkfvybtjgebqgm.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_6P_4LLFkuXmudLGkfwy2DQ_xthA1VET";
 
-        let zadaci = [];
+    const supabaseClient = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY
+    );
 
-        // Učitavanje sačuvanih zadataka iz pregledača.
-        try {
-            zadaci = JSON.parse(
-                localStorage.getItem("mojiProgramerskiZadaci")
-            ) || [];
-        } catch (error) {
-            zadaci = [];
+    const forma = document.getElementById("formaZadatka");
+    const lista = document.getElementById("listaZadataka");
+    const pretraga = document.getElementById("pretraga");
+    const praznaLista = document.getElementById("praznaLista");
+    const brojZadataka = document.getElementById("brojZadataka");
+
+    let zadaci = [];
+
+    async function ucitajZadatke() {
+        const { data, error } = await supabaseClient
+            .from("zadaci")
+            .select("*")
+            .order("id", { ascending: false });
+
+        if (error) {
+            console.error(error);
+            alert("Greška pri učitavanju zadataka.");
+            return;
         }
 
-        function sacuvajZadatke() {
-            try {
-                localStorage.setItem(
-                    "mojiProgramerskiZadaci",
-                    JSON.stringify(zadaci)
-                );
-                return true;
-            } catch (error) {
-                alert(
-                    "Nema dovoljno prostora za čuvanje fajla. " +
-                    "Pokušaj sa manjim fajlom ili obriši neki zadatak."
-                );
-                return false;
+        zadaci = data || [];
+        prikaziZadatke();
+    }
+
+    function prikaziZadatke() {
+        lista.replaceChildren();
+
+        const tekstPretrage = pretraga.value.toLowerCase().trim();
+
+        const filtrirani = zadaci.filter(zadatak =>
+            (zadatak.naziv || "").toLowerCase().includes(tekstPretrage) ||
+            (zadatak.opis || "").toLowerCase().includes(tekstPretrage) ||
+            (zadatak.fajl_naziv || "").toLowerCase().includes(tekstPretrage)
+        );
+
+        brojZadataka.textContent =
+            "Ukupan broj zadataka: " + zadaci.length;
+
+        praznaLista.style.display =
+            filtrirani.length === 0 ? "block" : "none";
+
+        praznaLista.textContent =
+            zadaci.length > 0
+                ? "Nema zadataka koji odgovaraju pretrazi."
+                : "Još nema sačuvanih zadataka.";
+
+        filtrirani.forEach(zadatak => {
+            const kartica = document.createElement("article");
+            kartica.className = "task";
+
+            const naslov = document.createElement("h3");
+            naslov.textContent = zadatak.naziv;
+
+            const opis = document.createElement("p");
+            opis.textContent = zadatak.opis || "Bez opisa.";
+
+            const imeFajla = document.createElement("p");
+            imeFajla.className = "file-name";
+            imeFajla.textContent =
+                "Fajl: " + zadatak.fajl_naziv;
+
+            kartica.append(naslov, opis, imeFajla);
+
+            if (
+                zadatak.fajl_tip &&
+                zadatak.fajl_tip.startsWith("image/")
+            ) {
+                const slika = document.createElement("img");
+                slika.src = zadatak.fajl_url;
+                slika.alt = zadatak.naziv;
+
+                kartica.appendChild(slika);
             }
-        }
 
-        function prikaziZadatke() {
-            lista.replaceChildren();
+            const preuzimanje = document.createElement("a");
+            preuzimanje.className = "download-link";
+            preuzimanje.href = zadatak.fajl_url;
+            preuzimanje.download = zadatak.fajl_naziv;
+            preuzimanje.target = "_blank";
+            preuzimanje.textContent = "Preuzmi fajl";
 
-            const tekstPretrage = pretraga.value.toLowerCase().trim();
+            kartica.appendChild(preuzimanje);
 
-            const filtrirani = zadaci.filter(zadatak =>
-                zadatak.naziv.toLowerCase().includes(tekstPretrage) ||
-                zadatak.opis.toLowerCase().includes(tekstPretrage) ||
-                zadatak.imeFajla.toLowerCase().includes(tekstPretrage)
-            );
+            const brisanje = document.createElement("button");
+            brisanje.className = "delete-btn";
+            brisanje.textContent = "Obriši";
 
-            brojZadataka.textContent =
-                "Ukupan broj zadataka: " + zadaci.length;
+            brisanje.addEventListener("click", async () => {
+                const potvrda = confirm(
+                    'Da li želiš da obrišeš zadatak "' +
+                    zadatak.naziv + '"?'
+                );
 
-            praznaLista.style.display =
-                filtrirani.length === 0 ? "block" : "none";
+                if (!potvrda) return;
 
-            if (zadaci.length > 0 && filtrirani.length === 0) {
-                praznaLista.textContent =
-                    "Nema zadataka koji odgovaraju pretrazi.";
-            } else {
-                praznaLista.textContent =
-                    "Još nema sačuvanih zadataka.";
-            }
+                const putanjaFajla =
+                    zadatak.fajl_url.split("/zadaci/")[1];
 
-            filtrirani.forEach(zadatak => {
-                const kartica = document.createElement("article");
-                kartica.className = "task";
+                const { error: storageError } =
+                    await supabaseClient.storage
+                        .from("zadaci")
+                        .remove([putanjaFajla]);
 
-                const naslov = document.createElement("h3");
-                naslov.textContent = zadatak.naziv;
-
-                const opis = document.createElement("p");
-                opis.textContent = zadatak.opis || "Bez opisa.";
-
-                const imeFajla = document.createElement("p");
-                imeFajla.className = "file-name";
-                imeFajla.textContent = "Fajl: " + zadatak.imeFajla;
-
-                kartica.append(naslov, opis, imeFajla);
-
-                // Prikaz slike direktno na sajtu.
-                if (
-                    zadatak.tipFajla &&
-                    zadatak.tipFajla.startsWith("image/")
-                ) {
-                    const slika = document.createElement("img");
-                    slika.src = zadatak.sadrzaj;
-                    slika.alt = zadatak.naziv;
-
-                    kartica.appendChild(slika);
+                if (storageError) {
+                    console.error(storageError);
                 }
 
-                // Dugme za preuzimanje originalnog fajla.
-                const preuzimanje = document.createElement("a");
-                preuzimanje.className = "download-link";
-                preuzimanje.href = zadatak.sadrzaj;
-                preuzimanje.download = zadatak.imeFajla;
-                preuzimanje.textContent = "Preuzmi fajl";
+                const { error: deleteError } =
+                    await supabaseClient
+                        .from("zadaci")
+                        .delete()
+                        .eq("id", zadatak.id);
 
-                kartica.appendChild(preuzimanje);
-
-                // Brisanje zadatka.
-                const brisanje = document.createElement("button");
-                brisanje.className = "delete-btn";
-                brisanje.textContent = "Obriši";
-
-                brisanje.addEventListener("click", () => {
-                    const potvrda = confirm(
-                        'Da li želiš da obrišeš zadatak "' +
-                        zadatak.naziv + '"?'
-                    );
-
-                    if (!potvrda) {
-                        return;
-                    }
-
-                    const prethodniZadaci = zadaci;
-                    zadaci = zadaci.filter(t => t.id !== zadatak.id);
-
-                    if (sacuvajZadatke()) {
-                        prikaziZadatke();
-                    } else {
-                        zadaci = prethodniZadaci;
-                    }
-                });
-
-                kartica.appendChild(brisanje);
-                lista.appendChild(kartica);
-            });
-        }
-
-        forma.addEventListener("submit", function(event) {
-            event.preventDefault();
-
-            const naziv = document.getElementById("naziv").value.trim();
-            const opis = document.getElementById("opis").value.trim();
-            const fajl = document.getElementById("fajl").files[0];
-
-            if (!naziv || !fajl) {
-                alert("Unesi naziv i izaberi fajl.");
-                return;
-            }
-
-            // Ograničenje pomaže da se ne popuni prostor pregledača.
-            const maksimalnaVelicina = 2 * 1024 * 1024;
-
-            if (fajl.size > maksimalnaVelicina) {
-                alert(
-                    "Fajl je prevelik. Za ovaj primer izaberi fajl " +
-                    "manji od 2 MB."
-                );
-                return;
-            }
-
-            const citac = new FileReader();
-
-            citac.onload = function() {
-                const noviZadatak = {
-                    id: Date.now().toString() +
-                        Math.random().toString(36).slice(2),
-                    naziv: naziv,
-                    opis: opis,
-                    imeFajla: fajl.name,
-                    tipFajla: fajl.type,
-                    sadrzaj: citac.result
-                };
-
-                zadaci.unshift(noviZadatak);
-
-                if (!sacuvajZadatke()) {
-                    zadaci.shift();
+                if (deleteError) {
+                    console.error(deleteError);
+                    alert("Greška pri brisanju zadatka.");
                     return;
                 }
 
-                forma.reset();
-                prikaziZadatke();
+                await ucitajZadatke();
+            });
 
-                alert("Zadatak je uspešno sačuvan!");
-
-                document.getElementById("zadaci").scrollIntoView({
-                    behavior: "smooth"
-                });
-            };
-
-            citac.onerror = function() {
-                alert("Došlo je do greške pri učitavanju fajla.");
-            };
-
-            citac.readAsDataURL(fajl);
+            kartica.appendChild(brisanje);
+            lista.appendChild(kartica);
         });
+    }
 
-        pretraga.addEventListener("input", prikaziZadatke);
+    forma.addEventListener("submit", async function(event) {
+        event.preventDefault();
 
-        prikaziZadatke();
-    </script>
+        const naziv =
+            document.getElementById("naziv").value.trim();
+
+        const opis =
+            document.getElementById("opis").value.trim();
+
+        const fajl =
+            document.getElementById("fajl").files[0];
+
+        if (!naziv || !fajl) {
+            alert("Unesi naziv i izaberi fajl.");
+            return;
+        }
+
+        const maksimalnaVelicina = 10 * 1024 * 1024;
+
+        if (fajl.size > maksimalnaVelicina) {
+            alert("Fajl je prevelik. Maksimum je 10 MB.");
+            return;
+        }
+
+        const sigurnoIme =
+            Date.now() + "_" +
+            fajl.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+        const { error: uploadError } =
+            await supabaseClient.storage
+                .from("zadaci")
+                .upload(sigurnoIme, fajl);
+
+        if (uploadError) {
+            console.error(uploadError);
+            alert("Greška pri slanju fajla.");
+            return;
+        }
+
+        const { data: urlData } =
+            supabaseClient.storage
+                .from("zadaci")
+                .getPublicUrl(sigurnoIme);
+
+        const fajlUrl = urlData.publicUrl;
+
+        const { error: insertError } =
+            await supabaseClient
+                .from("zadaci")
+                .insert({
+                    naziv: naziv,
+                    opis: opis,
+                    fajl_url: fajlUrl,
+                    fajl_naziv: fajl.name,
+                    fajl_tip: fajl.type
+                });
+
+        if (insertError) {
+            console.error(insertError);
+            alert("Greška pri čuvanju zadatka.");
+            return;
+        }
+
+        forma.reset();
+        await ucitajZadatke();
+
+        alert("Zadatak je uspešno sačuvan!");
+
+        document.getElementById("zadaci").scrollIntoView({
+            behavior: "smooth"
+        });
+    });
+
+    pretraga.addEventListener("input", prikaziZadatke);
+
+    ucitajZadatke();
+</script>
 
 </body>
 </html>
-```
