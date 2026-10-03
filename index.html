@@ -1,0 +1,474 @@
+```html
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Programiranje - Moji zadaci</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            color: #222;
+        }
+
+        header {
+            background: #202938;
+            color: white;
+            padding: 25px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin-bottom: 10px;
+        }
+
+        nav {
+            background: #151c28;
+            padding: 15px;
+            text-align: center;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+        }
+
+        nav a:hover {
+            color: #63a4ff;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .panel {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 7px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+
+        button {
+            background: #2463eb;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            margin-top: 15px;
+        }
+
+        button:hover {
+            background: #174bbd;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            margin-left: 5px;
+        }
+
+        .delete-btn:hover {
+            background: #b02a37;
+        }
+
+        .search {
+            margin-bottom: 20px;
+        }
+
+        .tasks {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .task {
+            border: 1px solid #ddd;
+            border-radius: 9px;
+            padding: 18px;
+            background: white;
+            min-width: 0;
+        }
+
+        .task h3 {
+            margin-bottom: 10px;
+            overflow-wrap: anywhere;
+        }
+
+        .task p {
+            margin: 10px 0;
+            overflow-wrap: anywhere;
+        }
+
+        .task img {
+            width: 100%;
+            max-height: 350px;
+            object-fit: contain;
+            margin-top: 12px;
+            border-radius: 6px;
+            background: #f0f0f0;
+        }
+
+        .file-name {
+            color: #555;
+            font-size: 14px;
+            overflow-wrap: anywhere;
+        }
+
+        .download-link {
+            display: inline-block;
+            background: #198754;
+            color: white;
+            padding: 10px 13px;
+            margin-top: 12px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+
+        .download-link:hover {
+            background: #146c43;
+        }
+
+        .empty {
+            color: #666;
+            padding: 20px 0;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #666;
+        }
+
+        @media (max-width: 600px) {
+            nav a {
+                display: inline-block;
+                margin: 7px;
+            }
+
+            .panel {
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Moji zadaci iz programiranja</h1>
+        <p>Jednostavno mesto za čuvanje školskih zadataka</p>
+    </header>
+
+    <nav>
+        <a href="#pocetna">Početna</a>
+        <a href="#dodavanje">Dodaj zadatak</a>
+        <a href="#zadaci">Moji zadaci</a>
+    </nav>
+
+    <main class="container">
+
+        <section class="panel" id="pocetna">
+            <h2>Dobro došao!</h2>
+            <p>
+                Ovde možeš da dodaješ, pregledaš i preuzimaš zadatke
+                iz programiranja. Možeš da sačuvaš dokumente, tekstualne
+                fajlove, PDF dokumente, slike i druge fajlove.
+            </p>
+            <p id="brojZadataka" style="margin-top: 12px;">
+                Ukupan broj zadataka: 0
+            </p>
+        </section>
+
+        <section class="panel" id="dodavanje">
+            <h2>Dodaj novi zadatak</h2>
+
+            <form id="formaZadatka">
+
+                <label for="naziv">Naziv zadatka:</label>
+                <input
+                    type="text"
+                    id="naziv"
+                    placeholder="Npr. Sabiranje dva broja"
+                    required
+                >
+
+                <label for="opis">Opis zadatka:</label>
+                <textarea
+                    id="opis"
+                    placeholder="Unesi kratak opis zadatka..."
+                ></textarea>
+
+                <label for="fajl">Izaberi fajl zadatka:</label>
+                <input
+                    type="file"
+                    id="fajl"
+                    required
+                >
+
+                <p style="font-size: 13px; color: #666; margin-top: 8px;">
+                    Slike će biti prikazane na sajtu. Ostale fajlove
+                    možeš da preuzmeš.
+                </p>
+
+                <button type="submit">Sačuvaj zadatak</button>
+
+            </form>
+        </section>
+
+        <section class="panel" id="zadaci">
+            <h2>Sačuvani zadaci</h2>
+
+            <input
+                type="search"
+                id="pretraga"
+                class="search"
+                placeholder="Pretraži zadatke..."
+            >
+
+            <div class="tasks" id="listaZadataka"></div>
+
+            <p id="praznaLista" class="empty">
+                Još nema sačuvanih zadataka.
+            </p>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>Školski projekat iz predmeta Programiranje</p>
+    </footer>
+
+    <script>
+        const forma = document.getElementById("formaZadatka");
+        const lista = document.getElementById("listaZadataka");
+        const pretraga = document.getElementById("pretraga");
+        const praznaLista = document.getElementById("praznaLista");
+        const brojZadataka = document.getElementById("brojZadataka");
+
+        let zadaci = [];
+
+        // Učitavanje sačuvanih zadataka iz pregledača.
+        try {
+            zadaci = JSON.parse(
+                localStorage.getItem("mojiProgramerskiZadaci")
+            ) || [];
+        } catch (error) {
+            zadaci = [];
+        }
+
+        function sacuvajZadatke() {
+            try {
+                localStorage.setItem(
+                    "mojiProgramerskiZadaci",
+                    JSON.stringify(zadaci)
+                );
+                return true;
+            } catch (error) {
+                alert(
+                    "Nema dovoljno prostora za čuvanje fajla. " +
+                    "Pokušaj sa manjim fajlom ili obriši neki zadatak."
+                );
+                return false;
+            }
+        }
+
+        function prikaziZadatke() {
+            lista.replaceChildren();
+
+            const tekstPretrage = pretraga.value.toLowerCase().trim();
+
+            const filtrirani = zadaci.filter(zadatak =>
+                zadatak.naziv.toLowerCase().includes(tekstPretrage) ||
+                zadatak.opis.toLowerCase().includes(tekstPretrage) ||
+                zadatak.imeFajla.toLowerCase().includes(tekstPretrage)
+            );
+
+            brojZadataka.textContent =
+                "Ukupan broj zadataka: " + zadaci.length;
+
+            praznaLista.style.display =
+                filtrirani.length === 0 ? "block" : "none";
+
+            if (zadaci.length > 0 && filtrirani.length === 0) {
+                praznaLista.textContent =
+                    "Nema zadataka koji odgovaraju pretrazi.";
+            } else {
+                praznaLista.textContent =
+                    "Još nema sačuvanih zadataka.";
+            }
+
+            filtrirani.forEach(zadatak => {
+                const kartica = document.createElement("article");
+                kartica.className = "task";
+
+                const naslov = document.createElement("h3");
+                naslov.textContent = zadatak.naziv;
+
+                const opis = document.createElement("p");
+                opis.textContent = zadatak.opis || "Bez opisa.";
+
+                const imeFajla = document.createElement("p");
+                imeFajla.className = "file-name";
+                imeFajla.textContent = "Fajl: " + zadatak.imeFajla;
+
+                kartica.append(naslov, opis, imeFajla);
+
+                // Prikaz slike direktno na sajtu.
+                if (
+                    zadatak.tipFajla &&
+                    zadatak.tipFajla.startsWith("image/")
+                ) {
+                    const slika = document.createElement("img");
+                    slika.src = zadatak.sadrzaj;
+                    slika.alt = zadatak.naziv;
+
+                    kartica.appendChild(slika);
+                }
+
+                // Dugme za preuzimanje originalnog fajla.
+                const preuzimanje = document.createElement("a");
+                preuzimanje.className = "download-link";
+                preuzimanje.href = zadatak.sadrzaj;
+                preuzimanje.download = zadatak.imeFajla;
+                preuzimanje.textContent = "Preuzmi fajl";
+
+                kartica.appendChild(preuzimanje);
+
+                // Brisanje zadatka.
+                const brisanje = document.createElement("button");
+                brisanje.className = "delete-btn";
+                brisanje.textContent = "Obriši";
+
+                brisanje.addEventListener("click", () => {
+                    const potvrda = confirm(
+                        'Da li želiš da obrišeš zadatak "' +
+                        zadatak.naziv + '"?'
+                    );
+
+                    if (!potvrda) {
+                        return;
+                    }
+
+                    const prethodniZadaci = zadaci;
+                    zadaci = zadaci.filter(t => t.id !== zadatak.id);
+
+                    if (sacuvajZadatke()) {
+                        prikaziZadatke();
+                    } else {
+                        zadaci = prethodniZadaci;
+                    }
+                });
+
+                kartica.appendChild(brisanje);
+                lista.appendChild(kartica);
+            });
+        }
+
+        forma.addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            const naziv = document.getElementById("naziv").value.trim();
+            const opis = document.getElementById("opis").value.trim();
+            const fajl = document.getElementById("fajl").files[0];
+
+            if (!naziv || !fajl) {
+                alert("Unesi naziv i izaberi fajl.");
+                return;
+            }
+
+            // Ograničenje pomaže da se ne popuni prostor pregledača.
+            const maksimalnaVelicina = 2 * 1024 * 1024;
+
+            if (fajl.size > maksimalnaVelicina) {
+                alert(
+                    "Fajl je prevelik. Za ovaj primer izaberi fajl " +
+                    "manji od 2 MB."
+                );
+                return;
+            }
+
+            const citac = new FileReader();
+
+            citac.onload = function() {
+                const noviZadatak = {
+                    id: Date.now().toString() +
+                        Math.random().toString(36).slice(2),
+                    naziv: naziv,
+                    opis: opis,
+                    imeFajla: fajl.name,
+                    tipFajla: fajl.type,
+                    sadrzaj: citac.result
+                };
+
+                zadaci.unshift(noviZadatak);
+
+                if (!sacuvajZadatke()) {
+                    zadaci.shift();
+                    return;
+                }
+
+                forma.reset();
+                prikaziZadatke();
+
+                alert("Zadatak je uspešno sačuvan!");
+
+                document.getElementById("zadaci").scrollIntoView({
+                    behavior: "smooth"
+                });
+            };
+
+            citac.onerror = function() {
+                alert("Došlo je do greške pri učitavanju fajla.");
+            };
+
+            citac.readAsDataURL(fajl);
+        });
+
+        pretraga.addEventListener("input", prikaziZadatke);
+
+        prikaziZadatke();
+    </script>
+
+</body>
+</html>
+```
