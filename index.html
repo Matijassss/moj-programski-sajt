@@ -237,16 +237,22 @@
                     placeholder="Unesi kratak opis zadatka..."
                 ></textarea>
 
-                <label for="fajl">Izaberi fajl zadatka:</label>
+                <label for="slika">Slika zadatka (opciono):</label>
+                <input
+                    type="file"
+                    id="slika"
+                    accept="image/*"
+                >
+
+                <label for="fajl">Fajl sa kodom / rešenjem (opciono):</label>
                 <input
                     type="file"
                     id="fajl"
-                    required
                 >
 
                 <p style="font-size: 13px; color: #666; margin-top: 8px;">
-                    Slike će biti prikazane na sajtu. Ostale fajlove
-                    možeš da preuzmeš.
+                    Možeš da dodaš i sliku i fajl sa kodom za isti zadatak.
+                    Potrebno je da izabereš bar jedan od ta dva fajla.
                 </p>
 
                 <button type="submit">Sačuvaj zadatak</button>
@@ -342,32 +348,44 @@
             const opis = document.createElement("p");
             opis.textContent = zadatak.opis || "Bez opisa.";
 
-            const imeFajla = document.createElement("p");
-            imeFajla.className = "file-name";
-            imeFajla.textContent =
-                "Fajl: " + zadatak.fajl_naziv;
+            kartica.append(naslov, opis);
 
-            kartica.append(naslov, opis, imeFajla);
+            // Prikaz slike zadatka, ako je dodata.
+            if (zadatak.slika_url) {
+                const imeSlike = document.createElement("p");
+                imeSlike.className = "file-name";
+                imeSlike.textContent = "Slika: " + (zadatak.slika_naziv || "slika");
+                kartica.appendChild(imeSlike);
 
-            if (
+                const slika = document.createElement("img");
+                slika.src = zadatak.slika_url;
+                slika.alt = zadatak.naziv;
+                kartica.appendChild(slika);
+            } else if (
                 zadatak.fajl_tip &&
                 zadatak.fajl_tip.startsWith("image/")
             ) {
+                // Podrška za stare zadatke koji su imali samo jedan fajl.
                 const slika = document.createElement("img");
                 slika.src = zadatak.fajl_url;
                 slika.alt = zadatak.naziv;
-
                 kartica.appendChild(slika);
             }
 
-            const preuzimanje = document.createElement("a");
-            preuzimanje.className = "download-link";
-            preuzimanje.href = zadatak.fajl_url;
-            preuzimanje.download = zadatak.fajl_naziv;
-            preuzimanje.target = "_blank";
-            preuzimanje.textContent = "Preuzmi fajl";
+            // Fajl sa kodom/rešenjem, ako je dodat.
+            if (zadatak.fajl_url) {
+                const imeFajla = document.createElement("p");
+                imeFajla.className = "file-name";
+                imeFajla.textContent = "Fajl sa kodom: " + (zadatak.fajl_naziv || "fajl");
+                kartica.appendChild(imeFajla);
 
-            kartica.appendChild(preuzimanje);
+                const preuzimanje = document.createElement("a");
+                preuzimanje.className = "download-link";
+                preuzimanje.href = zadatak.fajl_url;
+                preuzimanje.target = "_blank";
+                preuzimanje.textContent = "Preuzmi fajl sa kodom";
+                kartica.appendChild(preuzimanje);
+            }
 
             const brisanje = document.createElement("button");
             brisanje.className = "delete-btn";
@@ -381,16 +399,27 @@
 
                 if (!potvrda) return;
 
-                const putanjaFajla =
-                    zadatak.fajl_url.split("/zadaci/")[1];
+                // Obriši i fajl sa kodom i sliku (ako postoje).
+                const putanjeZaBrisanje = [];
 
-                const { error: storageError } =
-                    await supabaseClient.storage
+                if (zadatak.fajl_url) {
+                    const deo = zadatak.fajl_url.split("/zadaci/")[1];
+                    if (deo) putanjeZaBrisanje.push(decodeURIComponent(deo));
+                }
+
+                if (zadatak.slika_url) {
+                    const deo = zadatak.slika_url.split("/zadaci/")[1];
+                    if (deo) putanjeZaBrisanje.push(decodeURIComponent(deo));
+                }
+
+                if (putanjeZaBrisanje.length > 0) {
+                    const { error: storageError } = await supabaseClient.storage
                         .from("zadaci")
-                        .remove([putanjaFajla]);
+                        .remove(putanjeZaBrisanje);
 
-                if (storageError) {
-                    console.error(storageError);
+                    if (storageError) {
+                        console.error(storageError);
+                    }
                 }
 
                 const { error: deleteError } =
@@ -413,77 +442,107 @@
         });
     }
 
+    async function uploadujFajl(fajl, oznaka) {
+        if (!fajl) return null;
+
+        const maksimalnaVelicina = 10 * 1024 * 1024;
+        if (fajl.size > maksimalnaVelicina) {
+            throw new Error('Fajl "' + fajl.name + '" je veći od 10 MB.');
+        }
+
+        const sigurnoIme = Date.now() + "_" + oznaka + "_" +
+            fajl.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+        const { error: uploadError } = await supabaseClient.storage
+            .from("zadaci")
+            .upload(sigurnoIme, fajl);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabaseClient.storage
+            .from("zadaci")
+            .getPublicUrl(sigurnoIme);
+
+        return {
+            url: data.publicUrl,
+            ime: fajl.name,
+            tip: fajl.type || "application/octet-stream",
+            putanja: sigurnoIme
+        };
+    }
+
     forma.addEventListener("submit", async function(event) {
         event.preventDefault();
 
-        const naziv =
-            document.getElementById("naziv").value.trim();
+        const naziv = document.getElementById("naziv").value.trim();
+        const opis = document.getElementById("opis").value.trim();
+        const slikaFajl = document.getElementById("slika").files[0] || null;
+        const kodFajl = document.getElementById("fajl").files[0] || null;
 
-        const opis =
-            document.getElementById("opis").value.trim();
-
-        const fajl =
-            document.getElementById("fajl").files[0];
-
-        if (!naziv || !fajl) {
-            alert("Unesi naziv i izaberi fajl.");
+        if (!naziv) {
+            alert("Unesi naziv zadatka.");
             return;
         }
 
-        const maksimalnaVelicina = 10 * 1024 * 1024;
-
-        if (fajl.size > maksimalnaVelicina) {
-            alert("Fajl je prevelik. Maksimum je 10 MB.");
+        if (!slikaFajl && !kodFajl) {
+            alert("Izaberi sliku, fajl sa kodom ili oba fajla.");
             return;
         }
 
-        const sigurnoIme =
-            Date.now() + "_" +
-            fajl.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const dugme = forma.querySelector('button[type="submit"]');
+        dugme.disabled = true;
+        dugme.textContent = "Čuvanje...";
 
-        const { error: uploadError } =
-            await supabaseClient.storage
+        const uspesnoUploadovanePutanje = [];
+
+        try {
+            const slika = await uploadujFajl(slikaFajl, "slika");
+            if (slika) uspesnoUploadovanePutanje.push(slika.putanja);
+
+            const kod = await uploadujFajl(kodFajl, "kod");
+            if (kod) uspesnoUploadovanePutanje.push(kod.putanja);
+
+            const noviZadatak = {
+                naziv: naziv,
+                opis: opis,
+                fajl_url: kod ? kod.url : null,
+                fajl_naziv: kod ? kod.ime : null,
+                fajl_tip: kod ? kod.tip : null,
+                slika_url: slika ? slika.url : null,
+                slika_naziv: slika ? slika.ime : null,
+                slika_tip: slika ? slika.tip : null
+            };
+
+            const { error: insertError } = await supabaseClient
                 .from("zadaci")
-                .upload(sigurnoIme, fajl);
+                .insert(noviZadatak);
 
-        if (uploadError) {
-            console.error(uploadError);
-            alert("Greška pri slanju fajla.");
-            return;
+            if (insertError) throw insertError;
+
+            forma.reset();
+            await ucitajZadatke();
+            alert("Zadatak je uspešno sačuvan!");
+
+            document.getElementById("zadaci").scrollIntoView({
+                behavior: "smooth"
+            });
+        } catch (error) {
+            console.error(error);
+
+            // Ako upis ne uspe, ukloni fajlove koje smo upravo poslali.
+            if (uspesnoUploadovanePutanje.length > 0) {
+                const { error: cleanupError } = await supabaseClient.storage
+                    .from("zadaci")
+                    .remove(uspesnoUploadovanePutanje);
+
+                if (cleanupError) console.error(cleanupError);
+            }
+
+            alert("Greška pri čuvanju. Proveri da li su dodate kolone za sliku u Supabase tabelu i pokušaj ponovo. Detalji su u Console.");
+        } finally {
+            dugme.disabled = false;
+            dugme.textContent = "Sačuvaj zadatak";
         }
-
-        const { data: urlData } =
-            supabaseClient.storage
-                .from("zadaci")
-                .getPublicUrl(sigurnoIme);
-
-        const fajlUrl = urlData.publicUrl;
-
-        const { error: insertError } =
-            await supabaseClient
-                .from("zadaci")
-                .insert({
-                    naziv: naziv,
-                    opis: opis,
-                    fajl_url: fajlUrl,
-                    fajl_naziv: fajl.name,
-                    fajl_tip: fajl.type
-                });
-
-        if (insertError) {
-            console.error(insertError);
-            alert("Greška pri čuvanju zadatka.");
-            return;
-        }
-
-        forma.reset();
-        await ucitajZadatke();
-
-        alert("Zadatak je uspešno sačuvan!");
-
-        document.getElementById("zadaci").scrollIntoView({
-            behavior: "smooth"
-        });
     });
 
     pretraga.addEventListener("input", prikaziZadatke);
